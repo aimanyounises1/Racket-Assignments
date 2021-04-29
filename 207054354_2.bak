@@ -2,65 +2,47 @@
 
 #|The grammar of the language
 # Question 1.A
-  # we will check if there is ambguity => and yes there is ambiguity 
-ambiguity means we have different AST for each parse of SE
 
-
-################ Alot of fixes to prevent the ambiguity #####################
-
-<SE> ::<Str>           (1)
-      |<D>                     (2)
-      |<Char>                  (3)
-      |{string <Char>}      (4)
-      |{string-append <Str>} (5)
-      |{string-insert <Str> <Str> <Char> <D>}  (6)
-      |{number->string <NUM>}  (7)
-      |{string-length <Str>}   (8)
+<SE> ::<Str>
+      |<Empty>
+      |<D>
+      |<Char>
+      |{string <SE> <SE>}
+      |{string-append <SE> <SE>}
+      |{string-insert <SE> <SE>}
+      |{number->string <SE> <SE>}
+      |{string-length <SE> <SE>}
 
 
 # infinite digits for representing the a number in a string
-<D>::= <Digit> (9)
-       |<Digit> <D>  (10)
+<D>::= <Digit>
+       |<Digit> <D>
 
 
 # Represent the empty string
-<Empty> ::= λ (11)
+<Empty> ::= λ
           
 
 # Represent a String form digits only
 
-<Str> ::= <"<D>"> (12)            # this will return the number in a String calling Digit every time. 
-          |<Empty> <Str> (13)
-          |<Empty>       (14)
-          |{string-insert <Str> <Str> <Char> <D>} (15)
-          |{number->string <NUM>}               (16)
-
-
-
-<NUM> ::= |<D> (17) 
-          |{string-length <Str>} (18) 
-
-
+<Str> ::= <"<D>"> # this will return the number in a String calling Digit every time. 
+     
 # Represent a Char of one Digit
 
-<Char> ::= <CHR>    (19)
-          |<CHR> <Char> (20)        (15)# This grammar is to apply the String #\2 #\3 etc..
-
+<Char> ::= <CHR>
+          |<CHR> <Char> # This grammar is to apply the String #\2 #\3 etc..
 
 #Characters from #\0 #\1 etc..
-
-<CHR> ::= #\0 | #\1 | #\2 | #\3 | #\4 | #\5 | #\6 | #\7 | #\8 | #\9  (21)
-
-
+<CHR> ::= #\0 | #\1 | #\2 | #\3 | #\4 | #\5 | #\6 | #\7 | #\8 | #\9
 
 # Digits from 0 - 9
-<Digit>::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9    (22)
+<Digit>::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
            
 
  
-# Example to derivative Question 1.B , I've used the number of each grammar to help you check.
+# Example to derivative Question 1.B
 
-"12344" => (12) (Str "D(1)
+{"12344"} => (Str "D(1)
                         D(2)      
                             D(3)   
                                  D(4)
@@ -70,17 +52,13 @@ ambiguity means we have different AST for each parse of SE
                                         CHR(1) Char #\2 #\4 
                                               CHR(2)  Char #\2
                                                     CHR(4)) => "124"
-# here we can parse the right section first 
-(parse { string-append { string #\1 #\2 #\4 }  "12" }) (5) => (string-append(string CHR(1)
+ 
+(parse { string-append { string #\1 #\2 #\4 }  "12" }) => (string-append(string CHR(1)
                                                                                        CHR(2)
                                                                                                CHR(4))
-
-                                                                                                      ("D(1)
+                                
+  #(1979 3)                                                                     ("D(1)
                                                                                                               D(2)")) => "12412"
-
-(parse( number->string ( string-length "0033344" ) )) => (number->string <SE> <SE>) (10) => (number->stirng <STR> <SE>) =>
-(number->string 13 => "003334" <SE>) (11)^6 => (number->string "0033344" <SE> ) (12) => (number->string    
-
 |#
 
 #|Question 2 |#
