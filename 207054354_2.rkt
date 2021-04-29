@@ -12,7 +12,7 @@ ambiguity means we have different AST for each parse of SE
       |<D>                     (2)
       |<Char>                  (3)
       |{string <Char>}      (4)
-      |{string-append <Str>} (5)
+      |{string-append <Str*> <Str>} (5)
       |{string-insert <Str> <Str> <Char> <D>}  (6)
       |{number->string <NUM>}  (7)
       |{string-length <Str>}   (8)
@@ -34,52 +34,83 @@ ambiguity means we have different AST for each parse of SE
           |<Empty>       (14)
           |{string-insert <Str> <Str> <Char> <D>} (15)
           |{number->string <NUM>}               (16)
+          |{string <Char>}    (17)
 
 
 
-<NUM> ::= |<D> (17) 
-          |{string-length <Str>} (18) 
+<NUM> ::= |<D> (18) 
+          |{string-length <Str>} (19) 
 
 
 # Represent a Char of one Digit
 
-<Char> ::= <CHR>    (19)
-          |<CHR> <Char> (20)        (15)# This grammar is to apply the String #\2 #\3 etc..
+<Char> ::= <CHR>    (20)
+          |<CHR> <Char> (21)        (15)# This grammar is to apply the String #\2 #\3 etc..
 
 
 #Characters from #\0 #\1 etc..
 
-<CHR> ::= #\0 | #\1 | #\2 | #\3 | #\4 | #\5 | #\6 | #\7 | #\8 | #\9  (21)
+<CHR> ::= #\0 | #\1 | #\2 | #\3 | #\4 | #\5 | #\6 | #\7 | #\8 | #\9  (22)
 
 
 
 # Digits from 0 - 9
-<Digit>::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9    (22)
+<Digit>::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9    (23)
+
+
+
+# this terminal to avoid ambiguity in append so instead of using <Str> <Str> in append I used <Str*> <Str> to just make sure
+# that there is one deriviative
+
+
+<Str*> ::= {string Char} (24)
+
            
 
  
 # Example to derivative Question 1.B , I've used the number of each grammar to help you check.
 
-"12344" => (12) (Str "D(1)
+1) "12344" => (12) (Str "D(1)
                         D(2)      
                             D(3)   
                                  D(4)
                                      D(4)") => "12344"
 
-(parse ({string #\1 #\2 #\4}) => (String
-                                        CHR(1) Char #\2 #\4 
-                                              CHR(2)  Char #\2
-                                                    CHR(4)) => "124"
-# here we can parse the right section first 
-(parse { string-append { string #\1 #\2 #\4 }  "12" }) (5) => (string-append(string CHR(1)
-                                                                                       CHR(2)
-                                                                                               CHR(4))
+# Another example in parse
+ 
+2) (parse ({string #\1 #\2 #\4}) (4) => (String (21)^2 (20)) # here call the (4) grammar then call Char grammar first one is number (21)
+and the second one is (20)
 
-                                                                                                      ("D(1)
-                                                                                                              D(2)")) => "12412"
 
-(parse( number->string ( string-length "0033344" ) )) => (number->string <SE> <SE>) (10) => (number->stirng <STR> <SE>) =>
-(number->string 13 => "003334" <SE>) (11)^6 => (number->string "0033344" <SE> ) (12) => (number->string    
+
+#
+3)(parse { string-append { string #\1 #\2 #\4 }  "12" }) (5) => { string-append (24)  "12" }  => { string-append (24)  "12" }  =>
+ 
+{ string-append (24)  (12) } => { string-append (24)  (10) (9)} 
+
+
+
+
+4)(parse( number->string ( string-length "0033344" ) )) => { number->string {(18)}} =>  { number->string {(12)}} => { number->string {(10)}}
+{ number->string {(10)}} # and we got the result
+
+
+
+
+
+
+############# Examples of invalid syntax in this grammar ########################
+
+1)"a2b" => we can't get this result because there is no A and B characters in our alphabet
+
+
+2)  12 13 4 67 => we can't this word from our grammar
+
+3)( string 124 ) => {(4)} => we can't get numbers without #\v beacuase we will go to CHR grammar so we don't have this kind of words.
+
+4)( string-append ( string-length "44" ) "12" ) =>  we don't have ( string-length "44" ) in our Str grammar
+
+5) ( string-insert "1357" 4 66 )  => we can't apply that there is a terminal is missing.
 
 |#
 
@@ -96,7 +127,7 @@ ambiguity means we have different AST for each parse of SE
     (foldl + 0 result))) 
 
 
-
+;Tests to the function of sum-of-squares
 (test (sum-of-squares '(1 2 3)) => 14)
 (test (sum-of-squares '(1 2 4)) => 21)
 (test (sum-of-squares '(1 3 3)) => 19)
@@ -105,21 +136,22 @@ ambiguity means we have different AST for each parse of SE
 (test (sum-of-squares '(1 2 3 5 6 7)) => 124)
 (test (sum-of-squares '(1 2 3 5 6 7 8)) => (+ 124 (* 8 8)))
 (test (sum-of-squares '(1 2 3 5 6 7 9)) => (+ 124 (* 9 9)))
-
+; this function recieves a function and returns a function
 (: createPolynomial : (Listof Number) -> (Number -> Number))
-(define (createPolynomial coeffs)
+(define (createPolynomial coeffs) 
   (: poly : (Listof Number) Number Integer Number ->
      Number)
   (define (poly argsL x power accum)
-    (if (null? argsL)
+    (if (null? argsL) ;; return the accum of the list is null / empty 
         accum 
-    (poly (rest argsL) x (+ power 1) (+ accum (* (first argsL) (expt x power))))))
-  (: polyX : Number -> Number)
+    (poly (rest argsL) x (+ power 1) (+ accum (* (first argsL) (expt x power)))))) ;create the polynom using tail-recursion with evaluation
+  ;; and computing x value added to accum
+  (: polyX : Number -> Number) ;; poly recieve an x and 
   (define (polyX x)
-    (poly coeffs x 0 0))
-  polyX)
+    (poly coeffs x 0 0)) ;; call poly with this parameters to start the tail recursion 
+  polyX) ;; return the function
 
-
+;; ######################### Test from our assigment ########################
 
 (define p2345 (createPolynomial '(2 3 4 5)))
 (test (p2345 0) =>
@@ -138,10 +170,14 @@ ambiguity means we have different AST for each parse of SE
 
 
 #|
+The grammar was easy , but the first one Oh man , there was alot of terminals , LOL.
 The grammar:
- <PLANG> ::= {{poly <AEs> }{<AEs> }}
- <AEs> ::= <AE> | <AE> <AEs>
- <AE> ::= same as described in class
+ <PLANG> ::= {{poly <AEs> }{<AEs> }} # The plang terminal .
+ <AEs> ::= <AE> | <AE> <AEs>  # It's like <AE*>
+
+ <AE> ::= <num>
+ | <num> + <AE>
+ | <num> - <AE>
  |#
 (define-type PLANG
  [Poly (Listof AE) (Listof AE)])
@@ -156,7 +192,7 @@ The grammar:
  [Div AE AE])
 
  (: parse-sexpr : Sexpr -> AE)
- ;; to convert s-expressions into AEs
+ ;; to convert s-expressions into AEs almost the same as we saw in the lecture. the parser to get the AST of AEs.
  (define (parse-sexpr sexpr)
  (match sexpr
  [(number: n) (Num n)]
@@ -173,17 +209,17 @@ The grammar:
 
 
  (: parse : String -> PLANG)
- ;; parses a string containing a PLANG expressionto a PLANG AST
+ ;; parse the Plang string to Plang AST.
  (define (parse str)
    (let ([code (string->sexpr str)])
  (match code
-   ;; if pattern is poly followed by empty list we throw error
+   ;; throw error if the first part is empty list.
    [(list (cons 'poly '()) (list tai ...)) (error 'parse "at least one coefficient is
  required in ~s" code)]
-      ;; if pattern is ((poly $non empty list$) $empty list$) we throw error
+      ;; throw error if the first part is empty list.
    [(list (cons 'poly hea) '()) (error 'parse "at least one point is
  required in ~s" code)]
-   ;;otherwise we assume current syntax and use map to parse each of the list "AEs"
+   ;;otherwise we assume a correct syntax and use 2 HOLY maps to parse each of list them (The AEs's gang).
    [(list (cons 'poly hea) (list tai ...)) (Poly (map parse-sexpr hea) (map parse-sexpr tai))]
    [else (error 'parse "bad syntax in ~s"
                 code)])))
@@ -202,8 +238,7 @@ The grammar:
  =error> "parse: bad syntax in ((pct 1 2) ())")
 
 #|Question 4b|#
-;; evaluates AE expressions to numbers
-;; this question was actually pretty easy 20 minitues
+;; evaluation of AE expressions to numbers
 (: eval : AE ->  Number )
 (define (eval expr)
 (cases expr
@@ -215,10 +250,9 @@ The grammar:
 
 (: eval-poly : PLANG -> (Listof Number) )
 (define (eval-poly p-expr)
- (cases  p-expr
-   ;; if we have Poly type of variant
-   ;; we create polynomial from evaluating all "AES" in the first list
-   ;; then we use the returned function to caculate value at point (which are parsed from AEs with map and eval)
+ (cases  p-expr ;; 1) check if the type is poly , then do the next.
+   ;;2) evaluate all AEs and creat polynom
+   ;; 3) use the returned function to caculate value at points with 3 maps (which are parsed from AEs's eval)
    
    [(Poly coeffs points) (map (createPolynomial (map eval coeffs)) (map eval points))]))
 
