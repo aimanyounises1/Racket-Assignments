@@ -214,13 +214,13 @@ The grammar:
    (let ([code (string->sexpr str)])
  (match code
    ;; throw error if the first part is empty list.
-   [(list (cons 'poly '()) (list tai ...)) (error 'parse "at least one coefficient is
+   [(list (cons 'poly '()) (list t ...)) (error 'parse "at least one coefficient is
  required in ~s" code)]
       ;; throw error if the first part is empty list.
-   [(list (cons 'poly hea) '()) (error 'parse "at least one point is
+   [(list (cons 'poly h) '()) (error 'parse "at least one point is
  required in ~s" code)]
    ;;otherwise we assume a correct syntax and use 2 HOLY maps to parse each of list them (The AEs's gang).
-   [(list (cons 'poly hea) (list tai ...)) (Poly (map parse-sexpr hea) (map parse-sexpr tai))]
+   [(list (cons 'poly h) (list t ...)) (Poly (map parse-sexpr h) (map parse-sexpr t))]
    [else (error 'parse "bad syntax in ~s"
                 code)])))
 
@@ -257,7 +257,7 @@ The grammar:
    [(Poly coeffs points) (map (createPolynomial (map eval coeffs)) (map eval points))]))
 
 (: run : String -> (Listof Number))
-;; evaluate a FLANG program contained in a string
+;; evaluate a PLANG  in the string
 (define (run str)
 (eval-poly (parse str)))
 
